@@ -7,22 +7,88 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+##  Kasus 4: HDI
 
 ```{r cars}
-summary(cars)
+library(tidyverse)
+library(cluster)
+library(factoextra)
 ```
 
-## Including Plots
+```{r cars}
+df <- read.csv("../data-raw/004_hdi.csv")
 
-You can also embed plots, for example:
+dim(df)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+head(df,10)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r cars}
+rownames(df) <- df[,1]
+df <- df[,c(-1, -2)]
+
+princ <- princomp(df) 
+```
+```{r cars}
+sum(is.na(df))
+```
+
+```{r cars}
+distance <- get_dist(df, method = "euclidean" )
+
+fviz_dist(distance, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+```
+
+```{r cars}
+k2 <- kmeans(df, centers = 2, nstart = 25)
+str(k2)
+```
+
+
+```{r cars}
+fviz_cluster(k2, data = df)
+```
+
+```{r cars}
+df %>%
+  as_tibble() %>%
+  mutate(cluster = k2$cluster,
+         state = row.names(df)) %>%
+  ggplot(aes(hdi, revenue, color = factor(cluster), label = state)) +
+  geom_text()
+```
+
+
+```{r cars}
+k3 <- kmeans(df, centers = 3, nstart = 25)
+k4 <- kmeans(df, centers = 4, nstart = 25)
+k5 <- kmeans(df, centers = 5, nstart = 25)
+
+p1 <- fviz_cluster(k2, geom = "point", data = df) + ggtitle("k = 2")
+p2 <- fviz_cluster(k3, geom = "point",  data = df) + ggtitle("k = 3")
+p3 <- fviz_cluster(k4, geom = "point",  data = df) + ggtitle("k = 4")
+p4 <- fviz_cluster(k5, geom = "point",  data = df) + ggtitle("k = 5")
+
+#install packages gridExtra
+library(gridExtra) 
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+```
+
+```{r cars}
+fviz_nbclust(df, kmeans, method = "silhouette")
+```
+
+
+```{r cars}
+set.seed(123)
+final <- kmeans(df, 2, nstart = 25)
+print(final)
+fviz_cluster(final, data = df)
+```
+
+```{r cars}
+df%>%
+  mutate(Cluster = final$cluster) %>%
+  group_by(Cluster) %>%
+  summarise_all("mean")
+```
